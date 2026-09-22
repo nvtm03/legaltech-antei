@@ -1,0 +1,16 @@
+[project]
+name = "test-case"
+version = "0.1.0"
+description = "Модульный конструктор договоров: декомпозиция, поиск оговорок, стресс-тест"
+readme = "README.md"
+requires-python = ">=3.13"
+dependencies = [
+    "fastapi>=0.141.1",
+    "litellm>=1.102.0",
+    "openai>=2.54.0",
+    "pydantic>=2.13.5",
+    "python-dotenv>=1.2.3",
+    "qdrant-client>=1.19.1",
+    "rich>=15.0.0",
+    "uvicorn>=0.53.0",
+]

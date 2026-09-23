@@ -12,6 +12,7 @@ from rich.panel import Panel
 from rich.table import Table
 from rich.text import Text
 
+from core.llm import chat_model, use_mock
 from core.pipeline import run
 from core.scenarios import DEFAULT_SCENARIOS
 from schemas import AnalyzeResponse, FixSource
@@ -139,8 +140,10 @@ def _markdown_report(path: Path, scenario: str, result: AnalyzeResponse) -> str:
             f"- **Почему:** {result.validation_reason}\n"
         )
     assembled = result.assembled_contract or "Сборка не выполнена."
+    mode = "Режим: mock" if use_mock() else f"Режим: модель {chat_model()}"
     return (
         f"# {path.name}\n\n"
+        f"{mode}\n\n"
         f"## Декомпозиция\n\n"
         f"{decomposition}\n\n"
         f"## Результат RAG\n\n"

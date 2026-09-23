@@ -1,0 +1,20 @@
+name: test
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  unittest:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: astral-sh/setup-uv@v5
+      - run: uv sync
+      - name: Нет живого ключа в индексе
+        run: |
+          if git grep -I -n -E 'sk-or-v1-[0-9a-fA-F]{20,}|sk-proj-[A-Za-z0-9]{20,}' ; then
+            echo "В индексе лежит ключ провайдера"
+            exit 1
+          fi
+      - run: uv run python -m unittest discover -s tests

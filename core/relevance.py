@@ -27,7 +27,7 @@ def scenario_risks(scenario: str) -> set[str]:
         found.add("Legal")
     if any(word in blob for word in ("правк", "акт", "итерац", "прием")):
         found.add("Operational")
-    if any(word in blob for word in ("штраф", "пен", "оплат", "транш", "млн", "неусто")):
+    if any(word in blob for word in ("штраф", "пен", "оплат", "транш", "млн", "неусто", "поставк", "отгруз")):
         found.add("Financial")
     if not found:
         found.add("Operational")

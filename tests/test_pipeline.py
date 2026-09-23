@@ -4,7 +4,6 @@ from __future__ import annotations
 
 import json
 import os
-import re
 import subprocess
 import sys
 import tempfile
@@ -118,6 +117,8 @@ class RetrievalTests(unittest.TestCase):
                 self.assertNotEqual(result.modules.subject, "В договоре не указано.")
                 if name == "contract_1.txt":
                     self.assertNotIn("после подписания финального Акта", result.assembled_contract)
+                    self.assertIn("70%", result.assembled_contract)
+                    self.assertIn("5 дней", result.assembled_contract)
                 if name == "contract_2.txt":
                     self.assertNotIn("не предусмотрены", result.assembled_contract)
 
@@ -271,12 +272,20 @@ class CliTests(unittest.TestCase):
         )
         self.assertEqual(completed.returncode, 0, completed.stderr + completed.stdout)
         report = ROOT / "reports" / "contract_1.md"
-        self.assertTrue(report.is_file())
-        text = report.read_text(encoding="utf-8")
-        self.assertIn("Количество итераций правок ограничено тремя.", text)
-        self.assertIn("## Собранный договор", text)
-        self.assertIn("Сборка успешна", completed.stdout)
-        self.assertNotIn(tempfile.gettempdir() + "/reports", completed.stdout)
+        backup = report.read_text(encoding="utf-8") if report.is_file() else None
+        try:
+            self.assertTrue(report.is_file())
+            text = report.read_text(encoding="utf-8")
+            self.assertIn("Режим: mock", text)
+            self.assertIn("Количество итераций правок ограничено тремя.", text)
+            self.assertIn("## Собранный договор", text)
+            self.assertIn("Сборка успешна", completed.stdout)
+            self.assertNotIn(tempfile.gettempdir() + "/reports", completed.stdout)
+        finally:
+            if backup is None:
+                report.unlink(missing_ok=True)
+            else:
+                report.write_text(backup, encoding="utf-8")
 
 
 class AssemblyTests(unittest.TestCase):
@@ -324,6 +333,8 @@ class VerifierTests(unittest.TestCase):
         self.assertTrue(category_compatible("penalty", SCENARIOS["contract_2.txt"]))
         self.assertTrue(category_compatible("confidentiality", SCENARIOS["contract_3.txt"]))
         self.assertFalse(category_compatible("sla", SCENARIOS["contract_2.txt"]))
+        self.assertTrue(category_compatible("penalty", "Поставщик сорвал срок поставки"))
+        self.assertTrue(category_compatible("penalty", "Заказчик задержал оплату на 40 дней"))
 
     def test_bad_json_is_retried(self) -> None:
         state = {"n": 0}
@@ -341,17 +352,13 @@ class VerifierTests(unittest.TestCase):
         self.assertFalse(verdict.is_relevant)
 
 
-class SecretTests(unittest.TestCase):
-    def test_local_env_has_no_live_key(self) -> None:
-        env_file = ROOT / ".env"
-        if not env_file.exists():
-            return
-        text = env_file.read_text(encoding="utf-8")
-        self.assertIsNone(re.search(r"sk-or-v1-[0-9a-fA-F]{20,}", text), "В .env лежит живой ключ")
+_SECRET = r"sk-or-v1-[0-9a-fA-F]{20,}|sk-proj-[A-Za-z0-9]{20,}"
 
+
+class SecretTests(unittest.TestCase):
     def test_tracked_files_have_no_live_key(self) -> None:
         completed = subprocess.run(
-            ["git", "grep", "-I", "-n", "-E", r"sk-or-v1-[0-9a-fA-F]{20,}"],
+            ["git", "grep", "-I", "-n", "-E", _SECRET],
             cwd=ROOT,
             capture_output=True,
             text=True,

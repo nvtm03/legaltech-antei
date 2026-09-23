@@ -12,6 +12,7 @@ from schemas import AnalyzeResponse, FixSource
 
 _MAX_CONTRACT = 50_000
 _MAX_SCENARIO = 4_000
+_NO_FIX = "Подтверждённой оговорки из базы нет."
 _DEFAULT_DB = Path(__file__).resolve().parent.parent / "data" / "clauses_db.json"
 
 
@@ -29,6 +30,8 @@ def run(contract_text: str, scenario: str, db_path: str | None = None) -> Analyz
     accepted = _accepted(retrieved, validation, scenario)
     reference = accepted.text if accepted is not None else None
     report = simulate_conflict(contract_text, scenario, reference_clause=reference)
+    if accepted is None:
+        report = report.model_copy(update={"suggested_fix": _NO_FIX})
     fix_source = FixSource.NONE
     assembled: str | None = None
     if accepted is not None:

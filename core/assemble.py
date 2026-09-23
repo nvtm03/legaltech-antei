@@ -64,8 +64,10 @@ def _scrub(text: str, clause: str) -> str:
             kept_lines.append("")
             continue
         parts = [part for part in re.split(r"(?<=[.!?])\s+", stripped) if part]
-        kept = [part for part in parts if not _conflicts(part, clause)]
-        if kept:
+        kept = [item for item in (_adjust(part, clause) for part in parts) if item]
+        if kept == parts:
+            kept_lines.append(line)
+        elif kept:
             kept_lines.append(" ".join(kept))
     cleaned = "\n".join(kept_lines)
     if text.endswith("\n"):
@@ -73,25 +75,35 @@ def _scrub(text: str, clause: str) -> str:
     return cleaned
 
 
-def _conflicts(sentence: str, clause: str) -> bool:
-    """Фраза спорит с уже вставленной оговоркой из базы."""
+def _adjust(sentence: str, clause: str) -> str | None:
+    """Оставляет фразу, укорачивает её или убирает, если она спорит со вставленной оговоркой."""
     if sentence.strip() and sentence.strip() in clause:
-        return False
+        return sentence
     source = sentence.lower().replace("ё", "е")
     guard = clause.lower().replace("ё", "е")
     if ("не подписывает" in guard or "считаются принятыми" in guard) and "транш" in guard:
         if "транш" in source and "подписан" in source:
-            return True
+            trimmed = re.sub(r"\s+после подписания\b.*", "", sentence, flags=re.IGNORECASE).rstrip(" .")
+            if trimmed:
+                return trimmed + "."
+            return sentence
     if ("пен" in guard or "неусто" in guard) and "оплат" in guard and ("задерж" in guard or "просроч" in guard):
         if "не предусмотрен" in source and any(word in source for word in ("пен", "штраф", "неусто")):
-            return True
+            return None
     if "не более" in guard and any(word in guard for word in ("штраф", "пен")):
         if "без ограничени" in source and any(word in source for word in ("штраф", "пен")):
-            return True
-    if "доказыван" in guard or "доказательств" in guard:
+            return None
+    if any(word in guard for word in ("доказыван", "доказательств", "соразмерн", "333")):
         if "безусловно" in source or "без требования доказатель" in source:
-            return True
+            if re.search(r"\d", sentence):
+                head = re.split(r"\s+Выплата\b", sentence, maxsplit=1, flags=re.IGNORECASE)[0]
+                head = re.sub(r",?\s*без требования доказательства.*", "", head, flags=re.IGNORECASE).rstrip(" .")
+                return (head + ".") if head else None
+            return None
+    if "грифом" in guard and "только" in guard:
+        if "любая информация" in source or "абсолютно любая" in source:
+            return None
     if "итерац" in guard and "огранич" in guard:
         if "не ограничен" in source and "прав" in source:
-            return True
-    return False
+            return None
+    return sentence

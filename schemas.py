@@ -7,7 +7,6 @@ class FixSource(str, Enum):
     """Откуда взята формулировка, которой закрыли пролом."""
 
     REFERENCE = "reference"
-    GENERATED = "generated"
     NONE = "none"
 
 
@@ -59,7 +58,7 @@ class RiskReport(BaseModel):
     suggested_fix: str = Field(
         min_length=1,
         max_length=4_000,
-        description="Формулировка, которая закрывает найденный пролом.",
+        description="Текст оговорки из базы, если карточка принята. Иначе сообщение, что защиты из базы нет.",
     )
 
 
@@ -98,5 +97,5 @@ class AnalyzeResponse(BaseModel):
     )
     fix_source: FixSource = Field(
         default=FixSource.NONE,
-        description="reference — в текст подставлена оговорка из базы. none — сборка не делалась. Черновик модели в договор не вставляется.",
+        description="reference — в текст подставлена оговорка из базы. none — сборка не делалась.",
     )
